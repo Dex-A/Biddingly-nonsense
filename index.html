@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Art Auction Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        #gameContainer {
+            width: 90%;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #drawingPhase, #auctionPhase, #scoreboard {
+            display: none;
+        }
+        canvas {
+            border: 1px solid #000;
+        }
+        #paintingsGallery img {
+            width: 100px;
+            height: 100px;
+            margin: 5px;
+        }
+        #timer, #funds {
+            margin-top: 10px;
+            font-size: 18px;
+            color: #333;
+        }
+        #biddingInterface {
+            margin-top: 15px;
+        }
+        #scoreboard ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        #scoreboard ul li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+
+<div id="gameContainer">
+    <!-- Drawing Phase -->
+    <div id="drawingPhase">
+        <h2>Your Topic: <span id="topic">Hot Topic</span></h2>
+        <canvas id="drawingCanvas" width="500" height="500"></canvas>
+        <button id="submitDrawing">Submit Drawing</button>
+        <div id="timer">Time left: <span id="timeLeft">60</span> seconds</div>
+    </div>
+
+    <!-- Auction Phase -->
+    <div id="auctionPhase">
+        <h2>Auction: Bid for Paintings!</h2>
+        <div id="paintingsGallery">
+            <!-- Artwork will be displayed here as <img> elements -->
+        </div>
+        <div id="biddingInterface">
+            <input type="number" id="bidAmount" placeholder="Enter your bid">
+            <button id="placeBid">Place Bid</button>
+        </div>
+        <div id="funds">Your Funds: $<span id="fundsLeft">5000</span></div>
+    </div>
+
+    <!-- Scoreboard -->
+    <div id="scoreboard">
+        <h2>Players and their Funds</h2>
+        <ul id="playersFunds">
+            <!-- List of players and their funds will be displayed here -->
+        </ul>
+        <div id="eliminationMessage">Player <span id="eliminatedPlayer"></span> has been silenced!</div>
+    </div>
+</div>
+
+<script>
+    // Game variables
+    const player = { name: "Player", funds: 5000, hasBid: false };
+    const bots = [];
+    const paintings = [];
+    const maxBots = 9;
+    let currentRound = 1;
+    let timeLeft = 60;
+    let interval;
+
+    // Initialize bots
+    for (let i = 1; i <= maxBots; i++) {
+        bots.push({ name: "Bot " + i, funds: 5000, hasBid: false });
+    }
+
+    // Handle Drawing Phase
+    const canvas = document.getElementById('drawingCanvas');
+    const ctx = canvas.getContext('2d');
+    let drawing = false;
+
+    canvas.addEventListener('mousedown', (e) => {
+        drawing = true;
+        ctx.beginPath();
+        ctx.moveTo(e.offsetX, e.offsetY);
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+        if (drawing) {
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+        }
+    });
+
+    canvas.addEventListener('mouseup', () => {
+        drawing = false;
+        ctx.closePath();
+    });
+
+    document.getElementById('submitDrawing').addEventListener('click', () => {
+        // Save player's drawing
+        const playerDrawing = canvas.toDataURL();
+        paintings.push({ owner: player.name, img: playerDrawing, fake: false });
+        startAuction();
+    });
+
+    // Start Drawing Timer
+    function startDrawingPhase() {
+        document.getElementById('drawingPhase').style.display = 'block';
+        document.getElementById('auctionPhase').style.display = 'none';
+        document.getElementById('scoreboard').style.display = 'none';
+
+        interval = setInterval(() => {
+            timeLeft--;
+            document.getElementById('timeLeft').innerText = timeLeft;
+            if (timeLeft <= 0) {
+                clearInterval(interval);
+                alert("Time's up! Moving to auction...");
+                startAuction();
+            }
+        }, 1000);
+    }
+
+    // Auction Phase
+    function startAuction() {
+        document.getElementById('drawingPhase').style.display = 'none';
+        document.getElementById('auctionPhase').style.display = 'block';
+
+        const gallery = document.getElementById('paintingsGallery');
+        gallery.innerHTML = '';
+        paintings.forEach((painting, index) => {
+            const img = document.createElement('img');
+            img.src = painting.img;
+            img.alt = `Painting ${index + 1}`;
+            gallery.appendChild(img);
+        });
+
+        document.getElementById('placeBid').addEventListener('click', () => {
+            const bidAmount = parseInt(document.getElementById('bidAmount').value);
+            if (bidAmount > player.funds) {
+                alert("Insufficient funds!");
+            } else {
+                player.funds -= bidAmount;
+                document.getElementById('fundsLeft').innerText = player.funds;
+                // Handle auction logic (simple for now)
+                alert(`You bid $${bidAmount}`);
+                updateScoreboard();
+                nextRound();
+            }
+        });
+    }
+
+    // Update Scoreboard
+    function updateScoreboard() {
+        const scoreboard = document.getElementById('playersFunds');
+        scoreboard.innerHTML = `<li>${player.name}: $${player.funds}</li>`;
+        bots.forEach(bot => {
+            scoreboard.innerHTML += `<li>${bot.name}: $${bot.funds}</li>`;
+        });
+    }
+
+    // Handle Rounds
+    function nextRound() {
+        currentRound++;
+        if (player.funds <= 0) {
+            alert("You're out of money!");
+            document.getElementById('eliminatedPlayer').innerText = player.name;
+        }
+    }
+
+    // Start the game
+    startDrawingPhase();
+</script>
+
+</body>
+</html>
